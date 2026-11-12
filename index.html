@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Checklist Logística">
+    <title>Monitor Checklist Logistics PWA</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import "tailwindcss";
+        /* Evitar rebote de scroll en móviles y mejorar toque */
+        body {
+            overscroll-behavior-y: contain;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Ocultar scrollbar en barra horizontal de filtros */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col pb-24">
+
+    <!-- Header Fijo Móvil -->
+    <header class="bg-slate-800/95 backdrop-blur-md border-b border-slate-700 sticky top-0 z-40 px-4 py-3 shadow-lg">
+        <div class="max-w-2xl mx-auto flex flex-col gap-2.5">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="bg-blue-600 text-white w-9 h-9 rounded-xl shadow flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-clipboard-check text-base"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-base font-bold tracking-tight leading-tight">Checklist Logística</h1>
+                        <p class="text-[11px] text-slate-400">Control de Turno y Operativa</p>
+                    </div>
+                </div>
+                
+                <!-- Botón Instalar PWA (visible cuando el navegador lo permite) + Config Correo -->
+                <div class="flex items-center gap-2">
+                    <button id="install-btn" class="hidden bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1 shadow">
+                        <i class="fa-solid fa-mobile-screen-button"></i> Instalar
+                    </button>
+                    <button onclick="openSettingsModal()" class="bg-slate-700 hover:bg-slate-600 active:scale-95 text-slate-200 w-8 h-8 rounded-lg flex items-center justify-center border border-slate-600" title="Configurar correo">
+                        <i class="fa-solid fa-gear text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Selectores Fecha, Turno y Reinicio -->
+            <div class="grid grid-cols-12 gap-2">
+                <input type="date" id="task-date" class="col-span-5 bg-slate-700/80 text-slate-200 text-xs px-2.5 py-2 rounded-lg border border-slate-600 focus:outline-none focus:border-blue-500">
+                <select id="shift-select" class="col-span-5 bg-slate-700/80 text-slate-200 text-xs px-2.5 py-2 rounded-lg border border-slate-600 focus:outline-none focus:border-blue-500">
+                    <option value="Mañana">Turno Mañana</option>
+                    <option value="Tarde">Turno Tarde</option>
+                    <option value="Noche">Turno Noche</option>
+                </select>
+                <button onclick="resetTasks()" class="col-span-2 bg-slate-700 hover:bg-red-900/50 text-slate-300 hover:text-red-300 text-xs py-2 rounded-lg border border-slate-600 flex items-center justify-center transition" title="Reiniciar turno">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-2xl w-full mx-auto px-3 py-4 space-y-4">
+
+        <!-- Tarjeta de Progreso y Filtros Horizontales Deslizables -->
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-3.5 shadow-md space-y-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Progreso del Turno</span>
+                    <div class="flex items-baseline gap-2">
+                        <span id="progress-text" class="text-2xl font-black text-blue-400">0%</span>
+                        <span class="text-xs text-slate-400">(<span id="completed-count">0</span>/<span id="total-count">0</span>)</span>
+                    </div>
+                </div>
+                <button onclick="openEmailModal()" class="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs px-3.5 py-2.5 rounded-xl font-semibold transition flex items-center gap-2 shadow-md">
+                    <i class="fa-solid fa-paper-plane"></i> Enviar Cierre
+                </button>
+            </div>
+
+            <!-- Barra visual -->
+            <div class="w-full bg-slate-700 h-2.5 rounded-full overflow-hidden">
+                <div id="progress-bar" class="bg-blue-500 h-full transition-all duration-300" style="width: 0%;"></div>
+            </div>
+
+            <!-- Filtros deslizables para móvil -->
+            <div class="flex gap-1.5 overflow-x-auto no-scrollbar pt-1" id="phase-filters">
+                <button onclick="filterPhase('all', this)" class="phase-btn shrink-0 px-3 py-1.5 text-xs rounded-lg font-medium bg-blue-600 text-white transition">Todas</button>
+                <button onclick="filterPhase('Inicio de Turno', this)" class="phase-btn shrink-0 px-3 py-1.5 text-xs rounded-lg font-medium bg-slate-700 text-slate-300 transition">Inicio</button>
+                <button onclick="filterPhase('Durante el Turno', this)" class="phase-btn shrink-0 px-3 py-1.5 text-xs rounded-lg font-medium bg-slate-700 text-slate-300 transition">Durante</button>
+                <button onclick="filterPhase('Final de Turno', this)" class="phase-btn shrink-0 px-3 py-1.5 text-xs rounded-lg font-medium bg-slate-700 text-slate-300 transition">Final</button>
+                <button onclick="filterPhase('Semanal', this)" class="phase-btn shrink-0 px-3 py-1.5 text-xs rounded-lg font-medium bg-slate-700 text-slate-300 transition">Semanales</button>
+            </div>
+        </div>
+
+        <!-- Listado de Tareas -->
+        <div id="tasks-container" class="space-y-3"></div>
+
+    </main>
+
+    <!-- Barra Inferior Fija para Móvil -->
+    <div class="fixed bottom-0 inset-x-0 bg-slate-800/95 backdrop-blur-md border-t border-slate-700 p-3 z-40">
+        <div class="max-w-2xl mx-auto flex gap-2">
+            <button onclick="exportJSON()" class="flex-1 bg-slate-700 hover:bg-slate-600 active:scale-98 text-slate-200 text-xs py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 border border-slate-600">
+                <i class="fa-solid fa-file-arrow-down text-blue-400"></i> Guardar JSON
+            </button>
+            <button onclick="openEmailModal()" class="flex-[2] bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white text-xs py-3 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-lg">
+                <i class="fa-solid fa-envelope-circle-check text-base"></i> Finalizar y Enviar por Correo
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal de Envío por Correo -->
+    <div id="email-modal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-slate-800 border-t sm:border border-slate-700 w-full max-w-lg rounded-t-3xl sm:rounded-2xl p-5 space-y-4 shadow-2xl animate-slide-up">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h3 class="text-base font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-paper-plane text-emerald-400"></i> Enviar Informe de Turno
+                </h3>
+                <button onclick="closeEmailModal()" class="text-slate-400 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg bg-slate-700">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1 font-medium">Correo(s) destinatario(s)</label>
+                    <input type="email" id="recipient-email" placeholder="ejemplo@makro.es, responsable@empresa.com" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 mb-1 font-medium">Responsable / Monitor de turno</label>
+                    <input type="text" id="supervisor-name" placeholder="Tu nombre (opcional)" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-3 py-2.5 text-slate-100 focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div class="bg-slate-900/80 border border-slate-700 rounded-xl p-3 space-y-1 text-slate-300">
+                    <p class="font-semibold text-slate-200"><i class="fa-solid fa-circle-info text-blue-400 mr-1"></i> ¿Cómo funciona el envío en móvil?</p>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">
+                        1. <strong>Compartir con Archivo Adjunto (Recomendado):</strong> Abre el menú nativo de tu móvil para elegir Gmail/Outlook con el archivo <code>.json</code> ya adjunto.<br>
+                        2. <strong>Abrir App de Correo:</strong> Abre directamente tu gestor de correo con todo el resumen escrito y descarga el <code>.json</code> por si quieres adjuntarlo.
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2 pt-1">
+                <button onclick="shareWithFile()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs py-3.5 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-lg">
+                    <i class="fa-solid fa-share-nodes text-sm"></i> Enviar Correo con Archivo .JSON Adjunto
+                </button>
+                <button onclick="sendViaMailto()" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-envelope"></i> Abrir App de Correo (Texto + Descarga JSON)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Configuración (Correo por defecto) -->
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-5 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h3 class="text-base font-bold"><i class="fa-solid fa-gear text-blue-400 mr-2"></i>Ajustes Rápidos</h3>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg bg-slate-700">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1">Correo destinatario habitual</label>
+                    <input type="email" id="default-email" placeholder="destinatario@empresa.com" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-3 py-2.5 text-slate-100">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Tu nombre por defecto</label>
+                    <input type="text" id="default-name" placeholder="Nombre del monitor" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-3 py-2.5 text-slate-100">
+                </div>
+                <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-700 text-[11px] text-slate-400">
+                    <strong class="text-slate-200 block mb-1">📲 Cómo instalar en tu móvil:</strong>
+                    • <strong>Android (Chrome):</strong> Pulsa los 3 puntos arriba a la derecha → <em>"Instalar aplicación"</em> o <em>"Añadir a pantalla de inicio"</em>.<br>
+                    • <strong>iPhone (Safari):</strong> Pulsa el botón <em>Compartir</em> (cuadrado con flecha) → <em>"Añadir a pantalla de inicio"</em>.
+                </div>
+            </div>
+            <button onclick="saveSettings()" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs py-3 rounded-xl font-bold">
+                Guardar Preferencias
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. CONFIGURACIÓN PWA (MANIFEST + SERVICE WORKER DINÁMICO)
+        // ==========================================
+        const manifestData = {
+            name: "Monitor Checklist Logistics",
+            short_name: "Checklist",
+            description: "Control operativo de turnos y logística",
+            start_url: "./",
+            display: "standalone",
+            background_color: "#0f172a",
+            theme_color: "#0f172a",
+            orientation: "portrait",
+            icons: [
+                {
+                    src: "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#2563eb"/><path fill="#ffffff" d="M368 176L224 320l-80-80 32-32 48 48 112-112 32 32z"/></svg>`),
+                    sizes: "512x512",
+                    type: "image/svg+xml",
+                    purpose: "any maskable"
+                }
+            ]
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/manifest+json' });
+        const manifestURL = URL.createObjectURL(manifestBlob);
+        const linkManifest = document.createElement('link');
+        linkManifest.rel = 'manifest';
+        linkManifest.href = manifestURL;
+        document.head.appendChild(linkManifest);
+
+        // Registrar Service Worker offline básico si se sirve por HTTPS/localhost
+        if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+            const swCode = `
+                const CACHE_NAME = 'checklist-logistics-v1';
+                self.addEventListener('install', e => {
+                    self.skipWaiting();
+                });
+                self.addEventListener('fetch', e => {
+                    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+                });
+            `;
+            const swBlob = new Blob([swCode], { type: 'application/javascript' });
+            navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
+        }
+
+        // Capturar evento de instalación en Android/Chrome
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-btn');
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden');
+        });
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') installBtn.classList.add('hidden');
+                deferredPrompt = null;
+            }
+        });
+
+        // ==========================================
+        // 2. DATOS DE TAREAS
+        // ==========================================
+        const initialTasks = [
+          { "id": "d-init-1", "title": "Pasar lista de asistencia del personal usando fichero CORTE", "frequency": "Diaria", "phase": "Inicio de Turno", "status": "pending", "tools": ["CORTE"], "note": "" },
+          { "id": "d-init-2", "title": "Distribuir al personal en sus puestos de trabajo usando fichero CORTE", "frequency": "Diaria", "phase": "Inicio de Turno", "status": "pending", "tools": ["CORTE"], "note": "" },
+          { "id": "d-init-3", "title": "Re-distribuir personal en Circuitos teniendo en cuenta las ausencias y la hora de FIN de actividad máxima usando el fichero CORTE", "frequency": "Diaria", "phase": "Inicio de Turno", "status": "pending", "tools": ["CORTE"], "note": "" },
+          { "id": "d-init-4", "title": "Revisar incidencias de preparación del día anterior, hablar con cada uno de los causantes y rellenar en fichero Calidad interna.", "frequency": "Diaria", "phase": "Inicio de Turno", "status": "pending", "tools": ["Calidad interna"], "note": "" },
+          { "id": "d-dur-1", "title": "Revisar y rellenar productividad hora a hora de forma global en cada Circuito (CORTE) y hablar de forma individual con cada operario en caso de desviación a la baja en el objetivo de productividad.", "frequency": "Diaria", "phase": "Durante el Turno", "status": "pending", "tools": ["CORTE"], "note": "" },
+          { "id": "d-dur-2", "title": "Revisar las acumulaciones de recepciones y reaporvisionamientos y re-distribuir Carretilleros según necesidad. Herramienta GENERIX.", "frequency": "Diaria", "phase": "Durante el Turno", "status": "pending", "tools": ["GENERIX"], "note": "" },
+          { "id": "d-dur-3", "title": "Re-distribuir personal en los circuitos según necesidades y hora de FIN. Herramienta CORTE.", "frequency": "Diaria", "phase": "Durante el Turno", "status": "pending", "tools": ["CORTE"], "note": "" },
+          { "id": "d-dur-4", "title": "Ronda diaria para revisar correcta ubicación física de palets almacenados en altura.", "frequency": "Diaria", "phase": "Durante el Turno", "status": "pending", "tools": [], "note": "" },
+          { "id": "d-dur-5", "title": "Acompañamiento 1 hora diaria operarios y rellenado de OPP.", "frequency": "Diaria", "phase": "Durante el Turno", "status": "pending", "tools": ["OPP"], "note": "" },
+          { "id": "d-fin-1", "title": "Ronda de revisión de acumulación de cartón, plástico y residuos en pasillos/ubicaciones. Herramienta foto en grupo.", "frequency": "Diaria", "phase": "Final de Turno", "status": "pending", "tools": ["Foto en grupo"], "note": "" },
+          { "id": "d-fin-2", "title": "Revisión de roturas correctamente ubicadas e informadas en fichero – Foto en grupo y fichero “ROTOS”", "frequency": "Diaria", "phase": "Final de Turno", "status": "pending", "tools": ["Foto en grupo", "ROTOS"], "note": "" },
+          { "id": "d-fin-3", "title": "Comunicar las incidencias pendientes al siguiente turno.", "frequency": "Diaria", "phase": "Final de Turno", "status": "pending", "tools": [], "note": "" },
+          { "id": "d-sem-1", "title": "Revisar incidencias de preparación de la semana anterior, hablar con cada uno de los causante y rellenar el fichero de “calidad cliente”.", "frequency": "Diaria", "phase": "Semanal (Diario)", "status": "pending", "tools": ["Calidad cliente"], "note": "" },
+          { "id": "d-sem-2", "title": "Hacer revisión de ubicaciones libres. GENERIX.", "frequency": "Diaria", "phase": "Semanal (Diario)", "status": "pending", "tools": ["GENERIX"], "note": "" },
+          { "id": "sem-1", "title": "Realizar una revisión completa de los palets almacenados en altura.", "frequency": "Semanal", "phase": "Tareas Semanales", "status": "pending", "tools": [], "note": "" },
+          { "id": "sem-2", "title": "Revisar el estado de las zonas de almacenamiento y detectar mercancía mal ubicada.", "frequency": "Semanal", "phase": "Tareas Semanales", "status": "pending", "tools": [], "note": "" },
+          { "id": "sem-3", "title": "Comprobar el estado de las zonas de acumulación de residuos.", "frequency": "Semanal", "phase": "Tareas Semanales", "status": "pending", "tools": [], "note": "" },
+          { "id": "sem-4", "title": "Revisar las incidencias repetitivas y comunicar los problemas que requieren una solución definitiva.", "frequency": "Semanal", "phase": "Tareas Semanales", "status": "pending", "tools": [], "note": "" },
+          { "id": "sem-5", "title": "Revisar incidencias de calidad EXTERNA , hablar con cada uno de los causantes y rellenar en fichero Calidad externa.", "frequency": "Semanal", "phase": "Tareas Semanales", "status": "pending", "tools": ["Calidad externa"], "note": "" }
+        ];
+
+        let tasks = [];
+        let currentFilter = 'all';
+
+        document.getElementById('task-date').valueAsDate = new Date();
+
+        function loadTasks() {
+            const saved = localStorage.getItem('checklist_monitor_data');
+            if (saved) {
+                try { tasks = JSON.parse(saved); }
+                catch (e) { tasks = JSON.parse(JSON.stringify(initialTasks)); }
+            } else {
+                tasks = JSON.parse(JSON.stringify(initialTasks));
+            }
+            // Cargar preferencias de correo/nombre
+            document.getElementById('default-email').value = localStorage.getItem('checklist_default_email') || '';
+            document.getElementById('default-name').value = localStorage.getItem('checklist_default_name') || '';
+            render();
+        }
+
+        function saveTasks() {
+            localStorage.setItem('checklist_monitor_data', JSON.stringify(tasks));
+        }
+
+        function toggleTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.status = task.status === 'completed' ? 'pending' : 'completed';
+                saveTasks();
+                render();
+            }
+        }
+
+        function updateNote(id, value) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.note = value;
+                saveTasks();
+            }
+        }
+
+        function resetTasks() {
+            if (confirm('¿Quieres reiniciar todas las tareas a "Pendiente" y borrar las notas para empezar un nuevo turno?')) {
+                tasks = JSON.parse(JSON.stringify(initialTasks));
+                saveTasks();
+                render();
+            }
+        }
+
+        function filterPhase(phase, btnEl) {
+            currentFilter = phase;
+            document.querySelectorAll('.phase-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white');
+                btn.classList.add('bg-slate-700', 'text-slate-300');
+            });
+            btnEl.classList.remove('bg-slate-700', 'text-slate-300');
+            btnEl.classList.add('bg-blue-600', 'text-white');
+            render();
+        }
+
+        function render() {
+            const container = document.getElementById('tasks-container');
+            container.innerHTML = '';
+
+            const filtered = tasks.filter(t => {
+                if (currentFilter === 'all') return true;
+                if (currentFilter === 'Semanal') return t.phase.includes('Semanal');
+                return t.phase === currentFilter;
+            });
+
+            const completedCount = tasks.filter(t => t.status === 'completed').length;
+            const totalCount = tasks.length;
+            const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+            document.getElementById('completed-count').innerText = completedCount;
+            document.getElementById('total-count').innerText = totalCount;
+            document.getElementById('progress-text').innerText = percent + '%';
+            document.getElementById('progress-bar').style.width = percent + '%';
+
+            filtered.forEach(task => {
+                const isCompleted = task.status === 'completed';
+                let toolsHtml = (task.tools || []).map(tool =>
+                    `<span class="bg-slate-700/90 text-blue-300 text-[10px] font-semibold px-2 py-0.5 rounded-md border border-slate-600">${tool}</span>`
+                ).join(' ');
+
+                let phaseColor = 'bg-purple-900/60 text-purple-300 border-purple-700/50';
+                if (task.phase === 'Inicio de Turno') phaseColor = 'bg-emerald-900/60 text-emerald-300 border-emerald-700/50';
+                else if (task.phase === 'Durante el Turno') phaseColor = 'bg-blue-900/60 text-blue-300 border-blue-700/50';
+                else if (task.phase === 'Final de Turno') phaseColor = 'bg-amber-900/60 text-amber-300 border-amber-700/50';
+
+                const card = document.createElement('div');
+                card.className = `bg-slate-800 border transition-all rounded-2xl p-3.5 shadow-sm flex flex-col gap-2.5 ${isCompleted ? 'border-emerald-600/50 bg-slate-800/70' : 'border-slate-700'}`;
+
+                card.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <button onclick="toggleTask('${task.id}')" class="mt-0.5 w-7 h-7 shrink-0 rounded-xl flex items-center justify-center border-2 transition-all active:scale-90 ${isCompleted ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-700 border-slate-500 text-transparent'}">
+                            <i class="fa-solid fa-check text-sm ${isCompleted ? '' : 'hidden'}"></i>
+                        </button>
+                        <div class="space-y-1.5 flex-grow" onclick="toggleTask('${task.id}')">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-[10px] px-2 py-0.5 rounded-md border font-semibold ${phaseColor}">${task.phase}</span>
+                                ${toolsHtml}
+                            </div>
+                            <p class="text-[13px] font-medium leading-snug ${isCompleted ? 'line-through text-slate-400' : 'text-slate-100'}">${task.title}</p>
+                        </div>
+                    </div>
+                    <div class="pl-10">
+                        <input type="text" placeholder="Nota / incidencia..." value="${(task.note || '').replace(/"/g, '&quot;')}" oninput="updateNote('${task.id}', this.value)" class="w-full bg-slate-900/60 border border-slate-700 text-xs px-3 py-2 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500">
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // ==========================================
+        // 3. EXPORTACIÓN Y ENVÍO POR CORREO EN MÓVIL
+        // ==========================================
+        function getReportMetadata() {
+            const dateStr = document.getElementById('task-date').value || new Date().toISOString().slice(0, 10);
+            const shiftStr = document.getElementById('shift-select').value || 'Mañana';
+            const supervisor = document.getElementById('supervisor-name').value.trim();
+            const recipient = document.getElementById('recipient-email').value.trim();
+            const filename = `checklist_monitor_${dateStr}_${shiftStr}.json`;
+            return { dateStr, shiftStr, supervisor, recipient, filename };
+        }
+
+        function buildEmailSummaryText(meta) {
+            const completed = tasks.filter(t => t.status === 'completed');
+            const pending = tasks.filter(t => t.status !== 'completed');
+            const notesTasks = tasks.filter(t => t.note && t.note.trim() !== '');
+
+            let text = `INFORME CHECKLIST LOGÍSTICA\n`;
+            text += `Fecha: ${meta.dateStr} | Turno: ${meta.shiftStr}\n`;
+            if (meta.supervisor) text += `Monitor: ${meta.supervisor}\n`;
+            text += `Progreso: ${completed.length}/${tasks.length} tareas completadas (${Math.round((completed.length/tasks.length)*100)}%)\n`;
+            text += `----------------------------------------\n\n`;
+
+            if (notesTasks.length > 0) {
+                text += `OBSERVACIONES E INCIDENCIAS REGISTRADAS:\n`;
+                notesTasks.forEach(t => {
+                    text += `• [${t.phase}] ${t.title}\n  -> Nota: ${t.note}\n`;
+                });
+                text += `\n`;
+            }
+
+            if (pending.length > 0) {
+                text += `TAREAS PENDIENTES (${pending.length}):\n`;
+                pending.forEach(t => {
+                    text += `- [ ] (${t.phase}) ${t.title}\n`;
+                });
+                text += `\n`;
+            }
+
+            text += `TAREAS COMPLETADAS (${completed.length}):\n`;
+            completed.forEach(t => {
+                text += `- [OK] (${t.phase}) ${t.title}\n`;
+            });
+
+            return text;
+        }
+
+        function exportJSON() {
+            const meta = getReportMetadata();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks, null, 2));
+            const a = document.createElement('a');
+            a.href = dataStr;
+            a.download = meta.filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+
+        // Opción 1: Web Share API con archivo JSON adjunto (ideal en móviles Android/iOS)
+        async function shareWithFile() {
+            const meta = getReportMetadata();
+            if (meta.recipient) localStorage.setItem('checklist_default_email', meta.recipient);
+            if (meta.supervisor) localStorage.setItem('checklist_default_name', meta.supervisor);
+
+            const jsonContent = JSON.stringify(tasks, null, 2);
+            const file = new File([jsonContent], meta.filename, { type: 'application/json' });
+            const summaryText = buildEmailSummaryText(meta);
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        title: `Checklist Logística - ${meta.dateStr} (${meta.shiftStr})`,
+                        text: summaryText,
+                        files: [file]
+                    });
+                    closeEmailModal();
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        alert('No se pudo abrir el menú de compartir con archivo. Usa el botón azul "Abrir App de Correo".');
+                    }
+                }
+            } else {
+                alert('Tu navegador no permite adjuntar archivos directamente desde la web. Se abrirá tu app de correo y se descargará el archivo JSON para que lo adjuntes.');
+                sendViaMailto();
+            }
+        }
+
+        // Opción 2: Mailto clásico con cuerpo estructurado + descarga automática del JSON
+        function sendViaMailto() {
+            const meta = getReportMetadata();
+            if (meta.recipient) localStorage.setItem('checklist_default_email', meta.recipient);
+            if (meta.supervisor) localStorage.setItem('checklist_default_name', meta.supervisor);
+
+            exportJSON();
+            const subject = encodeURIComponent(`Checklist Logística - ${meta.dateStr} - Turno ${meta.shiftStr}`);
+            const body = encodeURIComponent(buildEmailSummaryText(meta));
+            window.location.href = `mailto:${encodeURIComponent(meta.recipient)}?subject=${subject}&body=${body}`;
+            closeEmailModal();
+        }
+
+        // ==========================================
+        // 4. MODALES
+        // ==========================================
+        function openEmailModal() {
+            document.getElementById('recipient-email').value = localStorage.getItem('checklist_default_email') || '';
+            document.getElementById('supervisor-name').value = localStorage.getItem('checklist_default_name') || '';
+            document.getElementById('email-modal').classList.remove('hidden');
+        }
+        function closeEmailModal() {
+            document.getElementById('email-modal').classList.add('hidden');
+        }
+        function openSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+        function saveSettings() {
+            localStorage.setItem('checklist_default_email', document.getElementById('default-email').value.trim());
+            localStorage.setItem('checklist_default_name', document.getElementById('default-name').value.trim());
+            closeSettingsModal();
+        }
+
+        loadTasks();
+    </script>
+</body>
+</html>
