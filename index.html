@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Control Operativo · Monitores & OPP</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --primary: #0f172a;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); padding-bottom: 80px; }
+
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    }
+    header h1 { margin: 0; font-size: 18px; letter-spacing: 0.3px; }
+    header p { margin: 4px 0 0; font-size: 12px; color: #94a3b8; }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      padding: 10px 12px;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    .tab-btn {
+      flex: 1;
+      min-width: 110px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .container { max-width: 680px; margin: 14px auto; padding: 0 12px; }
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      border: 1px solid var(--border);
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .badge {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 480px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .field { margin-bottom: 10px; }
+    label { display: block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px; }
+    input, select, textarea {
+      width: 100%;
+      padding: 9px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #fff;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+
+    .golden-rule {
+      background: #fef3c7;
+      border-left: 4px solid var(--warning);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #92400e;
+      margin-bottom: 14px;
+      line-height: 1.4;
+    }
+
+    .check-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: #fafafa;
+    }
+    .check-item h4 { margin: 0 0 4px; font-size: 14px; color: var(--primary); }
+    .check-item p { margin: 0 0 8px; font-size: 12px; color: #475569; line-height: 1.35; }
+
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      flex: 1;
+      min-width: 140px;
+      padding: 12px 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-wa { background: var(--success); color: #fff; }
+    .btn-pdf { background: var(--primary); color: #fff; }
+    .btn-reset { background: #e2e8f0; color: #334155; }
+
+    details {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      background: #f8fafc;
+    }
+    summary { font-weight: 700; font-size: 13px; cursor: pointer; color: var(--primary); }
+    details p, details ul { margin: 8px 0 0; font-size: 13px; color: #334155; padding-left: 18px; }
+
+    @media print {
+      header, .tabs, .btn-group, .no-print { display: none !important; }
+      body { background: #fff; padding: 0; }
+      .section { display: none !important; }
+      .section.active { display: block !important; }
+      .card { box-shadow: none; border: 1px solid #ccc; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Control Operativo · Almacén</h1>
+  <p>Checklist Monitores · OPP · Formación Locus (AMR)</p>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" onclick="switchTab('opp-locus', this)">🤖 OPP Operario Locus</button>
+  <button class="tab-btn" onclick="switchTab('guia-locus', this)">📘 Guion Formación</button>
+  <button class="tab-btn" onclick="switchTab('opp-general', this)">📋 OPP General / Zonas</button>
+</nav>
+
+<main class="container">
+
+  <!-- PESTAÑA 1: NUEVA OPP OPERARIO LOCUS -->
+  <section id="opp-locus" class="section active">
+    <div class="card">
+      <div class="card-title">
+        <span>OPP · Operario Locus (AMR)</span>
+        <span class="badge">NUEVA OPP</span>
+      </div>
+
+      <div class="golden-rule">
+        <strong>Regla de oro del puesto:</strong> Ejecutar SIEMPRE <strong>1º el movimiento físico</strong> (colocar producto en la cubeta) y <strong>2º la confirmación informática</strong> en pantalla.
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Operario evaluado</label>
+          <input type="text" id="locus_operario" placeholder="Nombre o código operario" />
+        </div>
+        <div class="field">
+          <label>Monitor / Formador</label>
+          <input type="text" id="locus_monitor" placeholder="Nombre del monitor" />
+        </div>
+        <div class="field">
+          <label>Turno</label>
+          <select id="locus_turno">
+            <option value="Mañana">Mañana</option>
+            <option value="Tarde">Tarde</option>
+            <option value="Noche">Noche</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Fase de observación</label>
+          <select id="locus_fase">
+            <option value="Día 1 · Inicial">Día 1 · Inicial</option>
+            <option value="Día 2 · Supervisado">Día 2 · Supervisado</option>
+            <option value="Día 3 · Validación">Día 3 · Validación</option>
+            <option value="OPP Periódica">OPP Periódica</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>Puntos de Control Operativo</span></div>
+      <div id="locus-items-container"></div>
+
+      <div class="field" style="margin-top: 12px;">
+        <label>Resultado de la OPP</label>
+        <select id="locus_resultado" style="font-weight: 700;">
+          <option value="APTO · Operario autónomo en Locus">🟢 APTO · Operario autónomo en Locus</option>
+          <option value="APTO CON SEGUIMIENTO · Reforzar puntos">🟡 APTO CON SEGUIMIENTO · Reforzar puntos</option>
+          <option value="REQUIERE REFUERZO · Nueva sesión guiada">🔴 REQUIERE REFUERZO · Nueva sesión guiada</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Observaciones y feedback al operario</label>
+        <textarea id="locus_obs" rows="3" placeholder="Anotar desviaciones detectadas o puntos reforzados..."></textarea>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-wa" onclick="enviarOPPLocusWA()">📲 Enviar por WhatsApp</button>
+        <button class="btn btn-pdf" onclick="window.print()">🖨️ Guardar PDF</button>
+        <button class="btn btn-reset" onclick="resetForm('opp-locus')">🔄 Limpiar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PESTAÑA 2: GUION PASO A PASO PARA FORMACIÓN -->
+  <section id="guia-locus" class="section">
+    <div class="card">
+      <div class="card-title">
+        <span>Guion Rápido · Formación Locus</span>
+        <span class="badge">SOPORTE TURNO</span>
+      </div>
+      <p style="font-size: 13px; color: #475569; margin-top: 0;">Guía de consulta rápida en pasillo para nuevas incorporaciones:</p>
+
+      <details open>
+        <summary>1. Inducción de cubeta y arranque</summary>
+        <ul>
+          <li>Verificar en pantalla la posición asignada (<strong>Posición 1</strong> o <strong>Posición 2</strong>).</li>
+          <li>Escanear el código de la cubeta y asentarla firme en el soporte del robot.</li>
+          <li>Confirmar en pantalla para liberar la ruta hacia la ubicación de destino.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>2. Lectura de pantalla y picking</summary>
+        <ul>
+          <li>Comprobar <strong>Ubicación</strong> (ej. <code>F-20-003-00</code> / Locus), descripción del artículo y <strong>cantidad en UNIDADES</strong>.</li>
+          <li>No confundir unidades sueltas con cajas o bultos completos.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>3. Regla de oro (Físico → Informático)</summary>
+        <ul>
+          <li><strong>1º Físico:</strong> Depositar el producto dentro de la cubeta asignada.</li>
+          <li><strong>2º Informático:</strong> Pulsar confirmación de cantidad en la pantalla del robot.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>4. Incidencia SHORT (Falta de producto)</summary>
+        <ul>
+          <li>Si el hueco está vacío, acudir a la <strong>mesa de soporte</strong> para validar stock.</li>
+          <li>Si se confirma falta, ajustar cantidad a <strong>0</strong> y confirmar incidencia (<code>SHORT - Qty 0</code>).</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>5. Incidencia FULL (Cubeta llena)</summary>
+        <ul>
+          <li>Introducir solo las unidades que quepan sin forzar ni desbordar (o <code>0</code> si no cabe ninguna).</li>
+          <li>Marcar la cantidad real introducida, pulsar el botón <strong>Full</strong> y confirmar.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>6. Circulación, pausa y seguridad</summary>
+        <ul>
+          <li>Respetar luces y trayectoria de arranque del robot hacia el siguiente <code>Locus</code>.</li>
+          <li>Usar el botón <strong>Pausar</strong> en pantalla ante cualquier bloqueo o incidencia en pasillo.</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+
+  <!-- PESTAÑA 3: OPP GENERAL POR ZONAS -->
+  <section id="opp-general" class="section">
+    <div class="card">
+      <div class="card-title">
+        <span>OPP Estándar · Zonas Almacén</span>
+        <span class="badge">PICKING / CARRETILLAS</span>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Operario</label>
+          <input type="text" id="gen_operario" placeholder="Nombre operario" />
+        </div>
+        <div class="field">
+          <label>Monitor</label>
+          <input type="text" id="gen_monitor" placeholder="Nombre monitor" />
+        </div>
+        <div class="field">
+          <label>Zona / Circuito</label>
+          <select id="gen_zona">
+            <option value="Locus (AMR)">Locus (AMR)</option>
+            <option value="Seco">Seco</option>
+            <option value="AAA">AAA</option>
+            <option value="Congelado">Congelado</option>
+            <option value="Refri">Refri</option>
+            <option value="Fyv">Fyv</option>
+            <option value="Adr">Adr</option>
+            <option value="Circuito 275 / 286 / 288">Circuito 275 / 286 / 288</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Turno</label>
+          <select id="gen_turno">
+            <option value="Mañana">Mañana</option>
+            <option value="Tarde">Tarde</option>
+            <option value="Noche">Noche</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="check-item">
+        <h4>1. Preparación y lectura de orden</h4>
+        <p>Verifica ubicación, referencia y unidades antes de manipular mercancía.</p>
+        <select class="gen-eval" data-item="Lectura y ubicación">
+          <option value="OK">✅ OK</option>
+          <option value="A mejorar">⚠️ A mejorar</option>
+        </select>
+      </div>
+
+      <div class="check-item">
+        <h4>2. Estiba y cuidado del producto</h4>
+        <p>Coloca los artículos pesados abajo y evita roturas o aplastamientos.</p>
+        <select class="gen-eval" data-item="Estiba y calidad">
+          <option value="OK">✅ OK</option>
+          <option value="A mejorar">⚠️ A mejorar</option>
+        </select>
+      </div>
+
+      <div class="check-item">
+        <h4>3. Seguridad y orden en pasillo</h4>
+        <p>Uso correcto de EPIs, respeto de prioridades y pasillos despejados.</p>
+        <select class="gen-eval" data-item="Seguridad y orden">
+          <option value="OK">✅ OK</option>
+          <option value="A mejorar">⚠️ A mejorar</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Observaciones</label>
+        <textarea id="gen_obs" rows="3" placeholder="Comentarios de la observación..."></textarea>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-wa" onclick="enviarOPPGeneralWA()">📲 Enviar por WhatsApp</button>
+        <button class="btn btn-pdf" onclick="window.print()">🖨️ Guardar PDF</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  const OPP_LOCUS_DATA = [
+    {
+      id: "locus_1",
+      titulo: "1. Inducción de cubeta",
+      desc: "Identifica posición asignada (1 o 2), escanea el tote correctamente y lo asienta firme en el robot."
+    },
+    {
+      id: "locus_2",
+      titulo: "2. Lectura de ubicación y unidades",
+      desc: "Verifica ubicación Locus, artículo y cantidad en UNIDADES (sin confundir con cajas o bultos)."
+    },
+    {
+      id: "locus_3",
+      titulo: "3. Regla de oro (Físico → Pantalla)",
+      desc: "Deposita siempre el producto en la cubeta ANTES de confirmar la cantidad en pantalla."
+    },
+    {
+      id: "locus_4",
+      titulo: "4. Gestión de Short (Faltante)",
+      desc: "Acude a la mesa de soporte ante falta de mercancía y confirma Qty 0 / SHORT cuando procede."
+    },
+    {
+      id: "locus_5",
+      titulo: "5. Gestión de Full (Cubeta llena)",
+      desc: "Introduce solo las unidades que caben sin desbordar, ajusta cantidad real y pulsa FULL."
+    },
+    {
+      id: "locus_6",
+      titulo: "6. Circulación, pausa y seguridad",
+      desc: "Respeta luces/trayectoria del robot, usa PAUSA si es necesario y mantiene el pasillo libre."
+    }
+  ];
+
+  function renderLocusItems() {
+    const container = document.getElementById("locus-items-container");
+    container.innerHTML = OPP_LOCUS_DATA.map(item => `
+      <div class="check-item">
+        <h4>${item.titulo}</h4>
+        <p>${item.desc}</p>
+        <select class="locus-eval" data-item="${item.titulo}">
+          <option value="OK">✅ OK</option>
+          <option value="A mejorar">⚠️ A mejorar</option>
+          <option value="N/A">➖ N/A</option>
+        </select>
+      </div>
+    `).join("");
+  }
+
+  function switchTab(sectionId, btn) {
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById(sectionId).classList.add("active");
+    btn.classList.add("active");
+  }
+
+  function enviarOPPLocusWA() {
+    const op = document.getElementById("locus_operario").value.trim() || "Sin especificar";
+    const mon = document.getElementById("locus_monitor").value.trim() || "Sin especificar";
+    const turno = document.getElementById("locus_turno").value;
+    const fase = document.getElementById("locus_fase").value;
+    const res = document.getElementById("locus_resultado").value;
+    const obs = document.getElementById("locus_obs").value.trim() || "Sin observaciones";
+    const fecha = new Date().toLocaleDateString("es-ES");
+
+    let itemsTxt = "";
+    document.querySelectorAll(".locus-eval").forEach(sel => {
+      itemsTxt += `• ${sel.dataset.item}: *${sel.value}*\n`;
+    });
+
+    const msg = `*OPP · OPERARIO LOCUS (AMR)*\n` +
+      `📅 Fecha: ${fecha} | Turno: ${turno}\n` +
+      `👤 Operario: *${op}*\n` +
+      `📋 Monitor: ${mon} | Fase: ${fase}\n\n` +
+      `*Evaluación en puesto:*\n${itemsTxt}\n` +
+      `🏁 *Resultado:* ${res}\n` +
+      `📝 *Observaciones:* ${obs}`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+  }
+
+  function enviarOPPGeneralWA() {
+    const op = document.getElementById("gen_operario").value.trim() || "Sin especificar";
+    const mon = document.getElementById("gen_monitor").value.trim() || "Sin especificar";
+    const zona = document.getElementById("gen_zona").value;
+    const turno = document.getElementById("gen_turno").value;
+    const obs = document.getElementById("gen_obs").value.trim() || "Sin observaciones";
+    const fecha = new Date().toLocaleDateString("es-ES");
+
+    let itemsTxt = "";
+    document.querySelectorAll(".gen-eval").forEach(sel => {
+      itemsTxt += `• ${sel.dataset.item}: *${sel.value}*\n`;
+    });
+
+    const msg = `*OPP OPERATIVA · ZONA ${zona.toUpperCase()}*\n` +
+      `📅 Fecha: ${fecha} | Turno: ${turno}\n` +
+      `👤 Operario: *${op}* | Monitor: ${mon}\n\n` +
+      `*Evaluación:*\n${itemsTxt}\n` +
+      `📝 *Observaciones:* ${obs}`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+  }
+
+  function resetForm(sectionId) {
+    const sec = document.getElementById(sectionId);
+    sec.querySelectorAll("input, textarea").forEach(el => el.value = "");
+    sec.querySelectorAll("select").forEach(el => el.selectedIndex = 0);
+  }
+
+  renderLocusItems();
+</script>
+
+</body>
+</html>
