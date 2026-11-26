@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Control Operativo v4 - Checklist &amp; OPP/SMAT</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #eef2f6;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #1d4ed8;
+      --primary-dark: #1e40af;
+      --success: #15803d;
+      --success-bg: #dcfce7;
+      --warning: #b45309;
+      --warning-bg: #fef3c7;
+      --danger: #b91c1c;
+      --danger-bg: #fee2e2;
+      --border: #e2e8f0;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    header {
+      background: linear-gradient(135deg, #0f172a, #1e3a8a);
+      color: #fff;
+      padding: 16px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.18);
+    }
+
+    .header-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      background: #2563eb;
+      color: #fff;
+      font-weight: 800;
+      padding: 8px 11px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+    }
+
+    h1 { margin: 0; font-size: 1.2rem; }
+    .subtitle { font-size: 0.8rem; color: #cbd5e1; }
+
+    .shift-selector {
+      display: flex;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.12);
+      padding: 4px;
+      border-radius: 10px;
+    }
+
+    .shift-btn {
+      border: none;
+      background: transparent;
+      color: #e2e8f0;
+      padding: 7px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .shift-btn.active {
+      background: #fff;
+      color: #0f172a;
+    }
+
+    main {
+      max-width: 1080px;
+      margin: 18px auto 48px;
+      padding: 0 14px;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 640px) {
+      .tabs { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .tab-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 11px 10px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    }
+
+    .card h2, .card h3 { margin-top: 0; }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .progress-bar-wrap {
+      width: 100%;
+      height: 12px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2563eb, #16a34a);
+      transition: width 0.25s ease;
+    }
+
+    .checklist-grid { display: grid; gap: 8px; }
+
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #f8fafc;
+      cursor: pointer;
+    }
+
+    .check-item.done {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+    }
+
+    .check-item input[type="checkbox"] {
+      margin-top: 3px;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--success);
+      cursor: pointer;
+    }
+
+    .check-meta {
+      font-size: 0.76rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+      color: #334155;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 9px;
+      font-family: inherit;
+      font-size: 0.94rem;
+      background: #fff;
+      color: var(--text);
+    }
+
+    textarea {
+      min-height: 86px;
+      resize: vertical;
+    }
+
+    .zone-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .zone-chip {
+      padding: 7px 13px;
+      border-radius: 999px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      font-weight: 700;
+      font-size: 0.84rem;
+      cursor: pointer;
+    }
+
+    .zone-chip.active {
+      background: #0f172a;
+      color: #fff;
+      border-color: #0f172a;
+    }
+
+    .criteria-box {
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .criteria-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      padding: 7px 0;
+      border-bottom: 1px dashed #bfdbfe;
+      font-size: 0.9rem;
+    }
+
+    .criteria-item:last-child { border-bottom: none; }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    button.action-btn {
+      border: none;
+      border-radius: 9px;
+      padding: 10px 15px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-secondary { background: #e2e8f0; color: #0f172a; }
+    .btn-danger { background: var(--danger); color: #fff; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .stat-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .list-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: #f8fafc;
+    }
+
+    .status-pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    .status-ok { background: var(--success-bg); color: var(--success); }
+    .status-warn { background: var(--warning-bg); color: var(--warning); }
+    .status-err { background: var(--danger-bg); color: var(--danger); }
+
+    .banner-complete {
+      display: none;
+      background: #dcfce7;
+      border: 1px solid #86efac;
+      color: #14532d;
+      padding: 14px;
+      border-radius: 10px;
+      margin-top: 12px;
+      font-weight: 600;
+    }
+
+    @media print {
+      header, .tabs, .btn-row, .no-print { display: none !important; }
+      .tab-panel { display: block !important; }
+      body { background: #fff; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-badge">CODEC TC · V4</div>
+        <div>
+          <h1>Control Operativo</h1>
+          <div class="subtitle">Operativa Logística - Checklist Briefing &amp; OPP/SMAT</div>
+        </div>
+      </div>
+      <div class="shift-selector" role="group" aria-label="Turno">
+        <button type="button" class="shift-btn active" data-shift="Mañana">Mañana</button>
+        <button type="button" class="shift-btn" data-shift="Tarde">Tarde</button>
+        <button type="button" class="shift-btn" data-shift="Noche">Noche</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="tabs">
+      <button type="button" class="tab-btn active" data-tab="checklist" id="tab-btn-checklist">📋 Checklist (18)</button>
+      <button type="button" class="tab-btn" data-tab="auditoria" id="tab-btn-auditoria">🦺 OPP / SMAT</button>
+      <button type="button" class="tab-btn" data-tab="historico" id="tab-btn-historico">📊 Histórico</button>
+      <button type="button" class="tab-btn" data-tab="mensaje" id="tab-btn-mensaje">💬 Mensaje</button>
+    </div>
+
+    <section id="panel-checklist" class="tab-panel active">
+      <div class="card">
+        <div class="progress-header">
+          <span id="progress-title">Progreso del Turno (Mañana)</span>
+          <span id="progress-text">0 / 18 (0%)</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div id="progress-bar" class="progress-bar-fill"></div>
+        </div>
+        <div id="checklist-container" class="checklist-grid"></div>
+        <div id="checklist-complete-banner" class="banner-complete">
+          🏆 ¡Gran Trabajo! Has completado todas las tareas del checklist. ¡Buen trabajo chicos! Hasta el próximo turno.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>📝 Observaciones y Relevo de Turno</h3>
+        <div class="form-grid">
+          <div>
+            <label for="responsable-turno">Responsable / Jefe de Turno</label>
+            <input type="text" id="responsable-turno" placeholder="Nombre del responsable" />
+          </div>
+        </div>
+        <div>
+          <label for="observaciones-turno">Incidencias, roturas, pendientes o notas para el siguiente turno</label>
+          <textarea id="observaciones-turno" placeholder="Anota incidencias del briefing, equipos, pasillos o relevo..."></textarea>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="action-btn btn-secondary" id="btn-reset-checklist">🔄 Reiniciar Checklist del Turno</button>
+          <button type="button" class="action-btn btn-primary" id="btn-save-checklist">💾 Guardar Checklist del Turno</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>📋 Checklists Guardados Hoy (<span id="count-checklists-hoy">0</span>)</h3>
+        <div id="lista-checklists-hoy"></div>
+      </div>
+    </section>
+
+    <section id="panel-auditoria" class="tab-panel">
+      <div class="card">
+        <h3>➕ Nueva Auditoría OPP / SMAT</h3>
+        <div class="form-grid">
+          <div>
+            <label for="tipo-auditoria">Tipo de Auditoría</label>
+            <select id="tipo-auditoria">
+              <option value="OPP Operario Locus (Inducción, Picking, Short/Full, Drop-Off)">OPP Operario Locus (Inducción, Picking, Short/Full, Drop-Off)</option>
+              <option value="Circuito Manual / Locus (Picking General)">Circuito Manual / Locus (Picking General)</option>
+              <option value="SMAT Carretillero (Retráctil / Frontal)">SMAT Carretillero (Retráctil / Frontal)</option>
+            </select>
+          </div>
+          <div>
+            <label for="operario-auditado">Operario Auditado</label>
+            <input type="text" id="operario-auditado" placeholder="Nombre o código del operario" />
+          </div>
+        </div>
+
+        <label>Zona / Pasillo</label>
+        <div class="zone-group" id="zone-group">
+          <button type="button" class="zone-chip active" data-zone="Seco">Seco</button>
+          <button type="button" class="zone-chip" data-zone="AAA">AAA</button>
+          <button type="button" class="zone-chip" data-zone="Congelado">Congelado</button>
+          <button type="button" class="zone-chip" data-zone="Fyv">Fyv</button>
+          <button type="button" class="zone-chip" data-zone="Refri">Refri</button>
+          <button type="button" class="zone-chip" data-zone="Adr">Adr</button>
+        </div>
+
+        <div id="opp-locus-criterios" class="criteria-box">
+          <strong>Puntos clave de evaluación — OPP Operario Locus:</strong>
+          <div id="criterios-locus-lista"></div>
+        </div>
+
+        <div>
+          <label for="feedback-operario">Observaciones / Feedback al operario</label>
+          <textarea id="feedback-operario" placeholder="Detalle de ejecución física, conteo por unidades, gestión de SHORT/Full o drop-off..."></textarea>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="action-btn btn-success" id="btn-save-auditoria">💾 Guardar Auditoría OPP/SMAT</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>✅ Auditorías Registradas Hoy (<span id="count-auditorias-hoy">0</span>)</h3>
+        <div id="lista-auditorias-hoy"></div>
+      </div>
+    </section>
+
+    <section id="panel-historico" class="tab-panel">
+      <div class="card">
+        <h3>📈 Resumen Acumulado OPP / SMAT</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-num" id="stat-semana">0</div>
+            <div>Esta Semana</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-mes">0</div>
+            <div>Este Mes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-anio">0</div>
+            <div>Este Año</div>
+          </div>
+        </div>
+        <p class="subtitle" style="color: var(--muted);">
+          El archivo <strong>Excel (.xlsx)</strong> incluye una hoja de <em>Resumen Dinámico</em> con fórmulas listas para controlar totales semanales, mensuales y anuales, además de las hojas editables de auditorías y checklist.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>☁️ Sincronización en Tiempo Real con SharePoint (Power Automate)</h3>
+        <div class="form-grid">
+          <div>
+            <label for="sharepoint-flow-url">URL HTTP POST de Power Automate</label>
+            <input type="url" id="sharepoint-flow-url" placeholder="https://prod-xx.westeurope.logic.azure.com:443/workflows/..." />
+          </div>
+          <div>
+            <label for="sharepoint-list-url">URL de tu Lista en SharePoint (consulta desde otro móvil)</label>
+            <input type="url" id="sharepoint-list-url" placeholder="https://tuempresa.sharepoint.com/sites/.../Lists/..." />
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="action-btn btn-primary" id="btn-enviar-sharepoint">☁️ Enviar Histórico a SharePoint</button>
+          <button type="button" class="action-btn btn-secondary" id="btn-abrir-sharepoint">📱 Abrir Lista SharePoint en Móvil</button>
+        </div>
+        <div id="sharepoint-status" class="status-pill status-warn">Pendiente de envío o configuración de URL.</div>
+      </div>
+
+      <div class="card">
+        <h3>🗂️ Historial Completo de Auditorías</h3>
+        <div class="btn-row no-print" style="margin-bottom: 12px;">
+          <button type="button" class="action-btn btn-danger" id="btn-limpiar-historico">🗑️ Limpiar histórico antiguo</button>
+          <button type="button" class="action-btn btn-secondary" id="btn-export-pdf">📄 WhatsApp (PDF)</button>
+          <button type="button" class="action-btn btn-success" id="btn-export-excel">📊 Carpeta (Excel)</button>
+        </div>
+        <div id="historial-completo-lista"></div>
+      </div>
+    </section>
+
+    <section id="panel-mensaje" class="tab-panel">
+      <div class="card">
+        <h3>💬 Mensaje de Relevo / Briefing</h3>
+        <textarea id="mensaje-relevo-texto" style="min-height: 180px;" readonly></textarea>
+        <div class="btn-row">
+          <button type="button" class="action-btn btn-primary" id="btn-regenerar-mensaje">🔄 Actualizar Mensaje</button>
+          <button type="button" class="action-btn btn-success" id="btn-copiar-mensaje">📋 Copiar Mensaje</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "operativa_logistica_estado_v4";
+
+    const CHECKLIST_ITEMS = [
+      { id: "briefing_inicio", text: "Realizar Briefing de inicio de turno con el equipo", area: "Briefing y Seguridad" },
+      { id: "epi_seguridad", text: "Verificar uso de EPIs, calzado de seguridad y chaleco reflectante", area: "Briefing y Seguridad" },
+      { id: "estado_pasillos", text: "Revisar limpieza, orden y ausencia de obstáculos en pasillos", area: "Orden y Pasillos" },
+      { id: "muelles_carga", text: "Comprobar estado y asignación de muelles de carga/descarga", area: "Muelles y Expediciones" },
+      { id: "carretillas_check", text: "Revisar estado operativo y carga de carretillas / equipos", area: "Equipos" },
+      { id: "locus_bots_check", text: "Verificar disponibilidad y estado de robots/terminales Locus", area: "Locus / AMR" },
+      { id: "dropoff_zonas", text: "Comprobar zonas de Drop-Off libres y señalizadas", area: "Locus / AMR" },
+      { id: "mesa_control_soporte", text: "Confirmar atención y canal activo en mesa de control", area: "Soporte Operativo" },
+      { id: "roturas_stock", text: "Detectar y registrar roturas o incidencias de stock en picking", area: "Calidad y Stock" },
+      { id: "ubicaciones_erroneas", text: "Revisar ubicaciones erróneas o artículos mal colocados", area: "Calidad y Stock" },
+      { id: "cargas_pendientes", text: "Controlar prioridades y horarios de rutas / cargas pendientes", area: "Expediciones" },
+      { id: "embalaje_paletizado", text: "Supervisar estabilidad de palets, retractilado y etiquetado", area: "Calidad y Expediciones" },
+      { id: "incidencias_operativas", text: "Registrar incidencias técnicas o bloqueos de circuito", area: "Incidencias" },
+      { id: "refuerzos_turno", text: "Ajustar dotación de operarios según carga de trabajo del turno", area: "Gestión de Equipo" },
+      { id: "seguridad_vial", text: "Vigilar velocidades y prioridades de paso entre peatones y máquinas", area: "Briefing y Seguridad" },
+      { id: "cierre_pendientes", text: "Confirmar cierre de tareas críticas antes del relevo", area: "Relevo" },
+      { id: "briefing_cierre", text: "Comunicar puntos clave del Briefing / relevo al siguiente turno", area: "Briefing y Seguridad" },
+      { id: "firma_relevo", text: "Completar responsable y observaciones de relevo de turno", area: "Relevo" }
+    ];
+
+    const CRITERIOS_OPP_LOCUS = [
+      "Movimiento físico primero: colocar el artículo en la cubeta / drop-off antes de confirmar en pantalla.",
+      "Ubicación, código y unidades: validar ubicación y referencia, contando siempre por unidades exactas.",
+      "Falta de stock (SHORT): consultar en mesa de control antes de bajar cantidad a 0 y confirmar SHORT.",
+      "Cubeta llena (Full): indicar la cantidad real que cabe (o 0 si no cabe), marcar Full y confirmar.",
+      "Pausa y drop-off: respetar Pause cuando aplique y ejecutar primero el movimiento físico en drop-off."
+    ];
+
+    function defaultState() {
+      return {
+        shift: "Mañana",
+        tab: "checklist",
+        zonaActual: "Seco",
+        sharepointFlowUrl: "",
+        sharepointListUrl: "",
+        lastSyncText: "Pendiente de envío o configuración de URL.",
+        lastSyncType: "status-warn",
+        shiftsData: {
+          Mañana: { checked: {}, responsable: "", observaciones: "" },
+          Tarde: { checked: {}, responsable: "", observaciones: "" },
+          Noche: { checked: {}, responsable: "", observaciones: "" }
+        },
+        checklistsGuardados: [],
+        auditorias: []
+      };
+    }
+
+    let state = loadState();
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaultState();
+        return { ...defaultState(), ...JSON.parse(raw) };
+      } catch (e) {
+        return defaultState();
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function getCurrentShiftObj() {
+      if (!state.shiftsData[state.shift]) {
+        state.shiftsData[state.shift] = { checked: {}, responsable: "", observaciones: "" };
+      }
+      return state.shiftsData[state.shift];
+    }
+
+    function renderShiftButtons() {
+      document.querySelectorAll(".shift-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.shift === state.shift);
+      });
+    }
+
+    function renderTabs() {
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.tab === state.tab);
+      });
+      document.querySelectorAll(".tab-panel").forEach((panel) => {
+        panel.classList.toggle("active", panel.id === `panel-${state.tab}`);
+      });
+      if (state.tab === "mensaje") {
+        actualizarMensajeRelevo();
+      }
+    }
+
+    function renderChecklist() {
+      const shiftObj = getCurrentShiftObj();
+      const container = document.getElementById("checklist-container");
+      container.innerHTML = "";
+
+      let doneCount = 0;
+      CHECKLIST_ITEMS.forEach((item, idx) => {
+        const isChecked = Boolean(shiftObj.checked[item.id]);
+        if (isChecked) doneCount++;
+
+        const label = document.createElement("label");
+        label.className = `check-item ${isChecked ? "done" : ""}`;
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = isChecked;
+        cb.addEventListener("change", () => {
+          shiftObj.checked[item.id] = cb.checked;
+          saveState();
+          renderChecklist();
+        });
+
+        const textWrap = document.createElement("div");
+        textWrap.innerHTML = `<div><strong>${idx + 1}.</strong> ${item.text}</div><div class="check-meta">${item.area}</div>`;
+
+        label.appendChild(cb);
+        label.appendChild(textWrap);
+        container.appendChild(label);
+      });
+
+      const total = CHECKLIST_ITEMS.length;
+      const pct = total ? Math.round((doneCount / total) * 100) : 0;
+
+      document.getElementById("tab-btn-checklist").textContent = `📋 Checklist (${total})`;
+      document.getElementById("progress-title").textContent = `Progreso del Turno (${state.shift})`;
+      document.getElementById("progress-text").textContent = `${doneCount} / ${total} (${pct}%)`;
+      document.getElementById("progress-bar").style.width = `${pct}%`;
+
+      document.getElementById("responsable-turno").value = shiftObj.responsable || "";
+      document.getElementById("observaciones-turno").value = shiftObj.observaciones || "";
+
+      const banner = document.getElementById("checklist-complete-banner");
+      banner.style.display = doneCount === total ? "block" : "none";
+
+      renderChecklistsHoy();
+    }
+
+    function renderChecklistsHoy() {
+      const hoyStr = new Date().toISOString().slice(0, 10);
+      const deHoy = state.checklistsGuardados.filter((c) => (c.fecha || "").slice(0, 10) === hoyStr);
+      document.getElementById("count-checklists-hoy").textContent = deHoy.length;
+
+      const wrap = document.getElementById("lista-checklists-hoy");
+      if (!deHoy.length) {
+        wrap.innerHTML = `<p style="color: var(--muted);">Aún no hay checklists guardados hoy.</p>`;
+        return;
+      }
+
+      wrap.innerHTML = deHoy
+        .slice()
+        .reverse()
+        .map(
+          (c) => `
+          <div class="list-item">
+            <strong>${c.turno}</strong> · ${c.progreso} · <span style="color: var(--muted);">${c.hora}</span>
+            <div><strong>Responsable:</strong> ${c.responsable || "Sin especificar"}</div>
+            <div><strong>Observaciones:</strong> ${c.observaciones || "Sin observaciones"}</div>
+          </div>`
+        )
+        .join("");
+    }
+
+    function renderCriteriosLocus() {
+      const tipo = document.getElementById("tipo-auditoria").value;
+      const box = document.getElementById("opp-locus-criterios");
+      const list = document.getElementById("criterios-locus-lista");
+
+      const esLocus = tipo.includes("OPP Operario Locus");
+      box.style.display = esLocus ? "block" : "none";
+
+      list.innerHTML = CRITERIOS_OPP_LOCUS.map(
+        (c, i) => `
+        <label class="criteria-item">
+          <input type="checkbox" class="locus-criterio-cb" data-index="${i}" checked />
+          <span>${c}</span>
+        </label>`
+      ).join("");
+    }
+
+    function renderZones() {
+      document.querySelectorAll(".zone-chip").forEach((chip) => {
+        chip.classList.toggle("active", chip.dataset.zone === state.zonaActual);
+      });
+    }
+
+    function renderAuditorias() {
+      const hoyStr = new Date().toISOString().slice(0, 10);
+      const deHoy = state.auditorias.filter((a) => (a.fecha || "").slice(0, 10) === hoyStr);
+      document.getElementById("count-auditorias-hoy").textContent = deHoy.length;
+
+      const hoyWrap = document.getElementById("lista-auditorias-hoy");
+      if (!deHoy.length) {
+        hoyWrap.innerHTML = `<p style="color: var(--muted);">No hay auditorías registradas hoy.</p>`;
+      } else {
+        hoyWrap.innerHTML = deHoy
+          .slice()
+          .reverse()
+          .map(
+            (a) => `
+            <div class="list-item">
+              <strong>${a.tipo}</strong> · <span style="color: var(--primary); font-weight: 700;">${a.zona}</span> · ${a.turno}
+              <div><strong>Operario:</strong> ${a.operario || "No indicado"} (${a.hora})</div>
+              <div><strong>Feedback:</strong> ${a.feedback || "Sin observaciones"}</div>
+            </div>`
+          )
+          .join("");
+      }
+
+      renderHistorico();
+    }
+
+    function renderHistorico() {
+      const ahora = new Date();
+      const inicioSemana = new Date(ahora);
+      const diaSemana = (ahora.getDay() + 6) % 7;
+      inicioSemana.setHours(0, 0, 0, 0);
+      inicioSemana.setDate(ahora.getDate() - diaSemana);
+
+      const mesActual = ahora.toISOString().slice(0, 7);
+      const anioActual = String(ahora.getFullYear());
+
+      let sem = 0;
+      let mes = 0;
+      let anio = 0;
+
+      state.auditorias.forEach((a) => {
+        const d = new Date(a.fecha);
+        if (!Number.isNaN(d.getTime())) {
+          if (d >= inicioSemana) sem++;
+          if ((a.fecha || "").slice(0, 7) === mesActual) mes++;
+          if ((a.fecha || "").slice(0, 4) === anioActual) anio++;
+        }
+      });
+
+      document.getElementById("stat-semana").textContent = sem;
+      document.getElementById("stat-mes").textContent = mes;
+      document.getElementById("stat-anio").textContent = anio;
+
+      document.getElementById("sharepoint-flow-url").value = state.sharepointFlowUrl || "";
+      document.getElementById("sharepoint-list-url").value = state.sharepointListUrl || "";
+
+      const spStatus = document.getElementById("sharepoint-status");
+      spStatus.textContent = state.lastSyncText;
+      spStatus.className = `status-pill ${state.lastSyncType}`;
+
+      const histWrap = document.getElementById("historial-completo-lista");
+      if (!state.auditorias.length) {
+        histWrap.innerHTML = `<p style="color: var(--muted);">El historial completo está vacío.</p>`;
+        return;
+      }
+
+      histWrap.innerHTML = state.auditorias
+        .slice()
+        .reverse()
+        .map(
+          (a) => `
+          <div class="list-item">
+            <strong>${a.tipo}</strong> · Zona: <strong>${a.zona}</strong> · Turno: ${a.turno}
+            <div style="font-size: 0.85rem; color: var(--muted);">${a.fecha} — Operario: ${a.operario || "N/D"}</div>
+            <div>${a.feedback || ""}</div>
+          </div>`
+        )
+        .join("");
+    }
+
+    function actualizarMensajeRelevo() {
+      const shiftObj = getCurrentShiftObj();
+      const done = CHECKLIST_ITEMS.filter((i) => shiftObj.checked[i.id]).length;
+      const total = CHECKLIST_ITEMS.length;
+      const pct = total ? Math.round((done / total) * 100) : 0;
+
+      const hoyStr = new Date().toISOString().slice(0, 10);
+      const audHoy = state.auditorias.filter((a) => (a.fecha || "").slice(0, 10) === hoyStr).length;
+
+      const texto = [
+        `📌 *RELEVO / BRIEFING — TURNO ${state.shift.toUpperCase()}* (${hoyStr})`,
+        `👤 Responsable: ${shiftObj.responsable || "No indicado"}`,
+        `✅ Checklist: ${done}/${total} (${pct}%)`,
+        `🦺 Auditorías OPP/SMAT hoy: ${audHoy}`,
+        `📝 Observaciones / Briefing: ${shiftObj.observaciones || "Sin incidencias destacadas."}`
+      ].join("
+");
+
+      document.getElementById("mensaje-relevo-texto").value = texto;
+    }
+
+    async function enviarHistoricoASharePoint() {
+      const flowUrl = document.getElementById("sharepoint-flow-url").value.trim();
+      const listUrl = document.getElementById("sharepoint-list-url").value.trim();
+      state.sharepointFlowUrl = flowUrl;
+      state.sharepointListUrl = listUrl;
+      saveState();
+
+      if (!flowUrl) {
+        state.lastSyncText = "Introduce primero la URL HTTP POST de tu flujo de Power Automate.";
+        state.lastSyncType = "status-warn";
+        saveState();
+        renderHistorico();
+        return;
+      }
+
+      state.lastSyncText = "Enviando datos a SharePoint...";
+      state.lastSyncType = "status-warn";
+      renderHistorico();
+
+      const payload = {
+        origen: "Control Operativo - Pestaña Histórico",
+        fechaEnvio: new Date().toISOString(),
+        turnoActual: state.shift,
+        sharepointListUrl: listUrl,
+        checklistsGuardados: state.checklistsGuardados,
+        auditorias: state.auditorias
+      };
+
+      try {
+        const res = await fetch(flowUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          throw new Error(`Error HTTP ${res.status}`);
+        }
+
+        const hora = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        state.lastSyncText = `Sincronizado con SharePoint a las ${hora}. Disponible para consulta desde otro móvil.`;
+        state.lastSyncType = "status-ok";
+      } catch (err) {
+        state.lastSyncText = `No se pudo enviar a SharePoint (${err.message}). Revisa la URL de Power Automate o CORS.`;
+        state.lastSyncType = "status-err";
+      }
+
+      saveState();
+      renderHistorico();
+    }
+
+    function exportarExcel() {
+      if (typeof XLSX === "undefined") {
+        alert("No se cargó la librería XLSX.");
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+
+      const resumenData = [
+        ["Métrica", "Valor", "Nota"],
+        ["Turno Actual", state.shift, ""],
+        ["Total Auditorías Registradas", state.auditorias.length, ""],
+        ["Checklists Guardados", state.checklistsGuardados.length, ""],
+        ["Fórmula Ejemplo (Auditorías)", { f: "COUNTA(Auditorias!A2:A1048576)" }, "Total filas en hoja Auditorias"]
+      ];
+      const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+      XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen Dinámico");
+
+      const audRows = [
+        ["Fecha", "Hora", "Turno", "Tipo Auditoría", "Zona", "Operario", "Feedback"]
+      ];
+      state.auditorias.forEach((a) => {
+        audRows.push([a.fecha, a.hora, a.turno, a.tipo, a.zona, a.operario, a.feedback]);
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(audRows), "Auditorias");
+
+      const chkRows = [
+        ["Fecha", "Hora", "Turno", "Responsable", "Progreso", "Observaciones"]
+      ];
+      state.checklistsGuardados.forEach((c) => {
+        chkRows.push([c.fecha, c.hora, c.turno, c.responsable, c.progreso, c.observaciones]);
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(chkRows), "Checklists");
+
+      XLSX.writeFile(wb, `Control_Operativo_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    }
+
+    document.querySelectorAll(".shift-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.shift = btn.dataset.shift;
+        saveState();
+        renderShiftButtons();
+        renderChecklist();
+        actualizarMensajeRelevo();
+      });
+    });
+
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.tab = btn.dataset.tab;
+        saveState();
+        renderTabs();
+      });
+    });
+
+    document.getElementById("responsable-turno").addEventListener("input", (e) => {
+      getCurrentShiftObj().responsable = e.target.value;
+      saveState();
+    });
+
+    document.getElementById("observaciones-turno").addEventListener("input", (e) => {
+      getCurrentShiftObj().observaciones = e.target.value;
+      saveState();
+    });
+
+    document.getElementById("btn-reset-checklist").addEventListener("click", () => {
+      getCurrentShiftObj().checked = {};
+      saveState();
+      renderChecklist();
+    });
+
+    document.getElementById("btn-save-checklist").addEventListener("click", () => {
+      const shiftObj = getCurrentShiftObj();
+      const done = CHECKLIST_ITEMS.filter((i) => shiftObj.checked[i.id]).length;
+      const total = CHECKLIST_ITEMS.length;
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      const ahora = new Date();
+
+      state.checklistsGuardados.push({
+        fecha: ahora.toISOString(),
+        hora: ahora.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+        turno: state.shift,
+        responsable: shiftObj.responsable,
+        observaciones: shiftObj.observaciones,
+        progreso: `${done} / ${total} (${pct}%)`
+      });
+
+      saveState();
+      renderChecklistsHoy();
+      alert("Checklist del turno guardado.");
+    });
+
+    document.getElementById("tipo-auditoria").addEventListener("change", renderCriteriosLocus);
+
+    document.querySelectorAll(".zone-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        state.zonaActual = chip.dataset.zone;
+        saveState();
+        renderZones();
+      });
+    });
+
+    document.getElementById("btn-save-auditoria").addEventListener("click", () => {
+      const tipo = document.getElementById("tipo-auditoria").value;
+      const operario = document.getElementById("operario-auditado").value.trim();
+      const feedback = document.getElementById("feedback-operario").value.trim();
+      const ahora = new Date();
+
+      const criteriosMarcados = Array.from(document.querySelectorAll(".locus-criterio-cb")).map(
+        (cb) => `${cb.checked ? "[OK]" : "[NO]"} ${CRITERIOS_OPP_LOCUS[Number(cb.dataset.index)]}`
+      );
+
+      state.auditorias.push({
+        fecha: ahora.toISOString(),
+        hora: ahora.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+        turno: state.shift,
+        tipo,
+        zona: state.zonaActual,
+        operario,
+        feedback: tipo.includes("OPP Operario Locus")
+          ? `${feedback ? feedback + " | " : ""}Criterios Locus: ${criteriosMarcados.join(" ; ")}`
+          : feedback
+      });
+
+      document.getElementById("operario-auditado").value = "";
+      document.getElementById("feedback-operario").value = "";
+      saveState();
+      renderAuditorias();
+      alert("Auditoría registrada.");
+    });
+
+    document.getElementById("btn-enviar-sharepoint").addEventListener("click", enviarHistoricoASharePoint);
+
+    document.getElementById("btn-abrir-sharepoint").addEventListener("click", () => {
+      const url = document.getElementById("sharepoint-list-url").value.trim() || state.sharepointListUrl;
+      if (!url) {
+        alert("Pega primero la URL de tu Lista de SharePoint para abrirla directamente desde tu móvil.");
+        return;
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    });
+
+    document.getElementById("btn-limpiar-historico").addEventListener("click", () => {
+      if (confirm("¿Deseas borrar el historial completo guardado en este navegador?")) {
+        state.auditorias = [];
+        state.checklistsGuardados = [];
+        saveState();
+        renderAuditorias();
+        renderChecklistsHoy();
+      }
+    });
+
+    document.getElementById("btn-export-pdf").addEventListener("click", () => {
+      window.print();
+    });
+
+    document.getElementById("btn-export-excel").addEventListener("click", exportarExcel);
+
+    document.getElementById("btn-regenerar-mensaje").addEventListener("click", actualizarMensajeRelevo);
+
+    document.getElementById("btn-copiar-mensaje").addEventListener("click", async () => {
+      const txt = document.getElementById("mensaje-relevo-texto").value;
+      try {
+        await navigator.clipboard.writeText(txt);
+        alert("Mensaje copiado al portapapeles.");
+      } catch (e) {
+        alert("Selecciona y copia el texto manualmente.");
+      }
+    });
+
+    renderShiftButtons();
+    renderTabs();
+    renderChecklist();
+    renderCriteriosLocus();
+    renderZones();
+    renderAuditorias();
+    actualizarMensajeRelevo();
+  </script>
+</body>
+</html>
